@@ -21,7 +21,12 @@ def print_leaderboards():
 
 def get_player_rating(username):
     data = get_player_stats(username).json
-    printer.pprint(data)
+    try:
+        chess_bullet_data = data['stats']['chess_bullet']
+        print('Categoria: chess_bullet')
+        print(f'Rating atual: {chess_bullet_data["last"]["rating"]}')
+    except KeyError as e:
+        print(f"Erro ao obter dados de rating: {e}")
 
 print_leaderboards()
 get_player_rating("GustavoHertz")
