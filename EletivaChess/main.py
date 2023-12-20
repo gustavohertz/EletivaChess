@@ -25,6 +25,7 @@ def get_player_rating(username):
         chess_bullet_data = data['stats']['chess_bullet']
         print('Categoria: chess_bullet')
         print(f'Rating atual: {chess_bullet_data["last"]["rating"]}')
+        print(f'Maior rating: {chess_bullet_data["best"]["rating"]}')
     except KeyError as e:
         print(f"Erro ao obter dados de rating: {e}")
 
