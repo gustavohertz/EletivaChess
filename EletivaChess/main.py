@@ -20,42 +20,8 @@ def get_player_rating(username):
     except KeyError as e:
         print(f"Erro ao obter dados de rating: {e}")
 
-def get_last_played_games(username):
-    try:
-        # Obtendo dados dos jogos atuais
-        current_games_url = f'https://api.chess.com/pub/player/{username}/games'
-        current_games_response = requests.get(current_games_url, headers=headers)
-        current_games_data = current_games_response.json()
 
-        # Verificando se há jogos atuais
-        if current_games_data.get('games'):
-            print('Jogos Atuais:')
-            for game in current_games_data['games']:
-                print(f'URL do Jogo: {game["url"]}')
-                print(f'Movimentos (PGN): {game["pgn"]}')
-                print(f'Regras: {game["rules"]}')
-                print(f'Tempo de Controle: {game["time_control"]}')
-                print('---')
-
-        # Obtendo dados dos jogos onde é a vez do jogador
-        to_move_games_url = f'https://api.chess.com/pub/player/{username}/games/to-move'
-        to_move_games_response = requests.get(to_move_games_url, headers=headers)
-        to_move_games_data = to_move_games_response.json()
-
-        # Verificando se há jogos onde é a vez do jogador
-        if to_move_games_data.get('games'):
-            print('Jogos onde é a vez do jogador:')
-            for game in to_move_games_data['games']:
-                print(f'URL do Jogo: {game["url"]}')
-                print(f'Movimentos (PGN): {game["pgn"]}')
-                print(f'Draw Offer: {game.get("draw_offer", False)}')
-                print('---')
-
-    except requests.exceptions.RequestException as e:
-        print(f"Erro ao obter dados dos jogos: {e}")
-
-
-def get_games_with_opening_info(username,year=2023, month=11, num_games=5):
+def get_games_with_opening_info(username,year=2023,num_games=50):
     try:
         # Obtendo dados dos arquivos de jogos mensais de novembro
         archives_url = f'https://api.chess.com/pub/player/{username}/games/archives'
@@ -63,7 +29,7 @@ def get_games_with_opening_info(username,year=2023, month=11, num_games=5):
         archives_data = archives_response.json()
 
         # Encontrando o URL do arquivo do mês de novembro
-        november_archive_url = next((url for url in archives_data['archives'] if f'/games/{year}/{month}' in url), None)
+        november_archive_url = next((url for url in archives_data['archives'] if f'/games/{year}' in url), None)
 
         # Verificando se o arquivo de novembro foi encontrado
         if november_archive_url:
@@ -87,14 +53,10 @@ def get_games_with_opening_info(username,year=2023, month=11, num_games=5):
                         print(f'URL do Jogo: {game["url"]}')
                         print(f'Movimentos (PGN): {game["pgn"]}')
                         print(f'ECO URL da Abertura: {eco_url}')
-                        # Obtendo o resultado da partida
-                        result = game.get('result', 'N/A')
-                        print(f'Resultado da Partida: {result}')
-                        print('---')
+
 
     except requests.exceptions.RequestException as e:
         print(f"Erro ao obter dados dos jogos: {e}")
 
 get_player_rating("GMKrikor")
-get_last_played_games("GMKrikor")
-get_games_with_opening_info("GMKrikor",year=2023, month=11, num_games=5)
+get_games_with_opening_info("GMKrikor",year=2023,num_games=50)
