@@ -8,92 +8,52 @@ from io import StringIO
 headers = {'User-Agent': 'My Python Application. Contact me at email@example.com'}
 chessdotcom.Client.request_config['headers'] = headers
 
-
-def get_player_rating(username):
-    data = get_player_stats(username).json
+def calculate_opening_win_percentage(username, month=11, num_games=30):
     try:
-        chess_bullet_data = data['stats']['chess_bullet']
-        print('Categoria: chess_bullet')
-        print(f'Rating atual: {chess_bullet_data["last"]["rating"]}')
-        print(f'Maior rating: {chess_bullet_data["best"]["rating"]}')
-        print(f'Maior rating: {chess_bullet_data["record"]}')
-    except KeyError as e:
-        print(f"Erro ao obter dados de rating: {e}")
-
-
-def get_games_with_opening_info(username,year=2023,num_games=50):
-    try:
-        # Obtendo dados dos arquivos de jogos mensais de novembro
         archives_url = f'https://api.chess.com/pub/player/{username}/games/archives'
         archives_response = requests.get(archives_url, headers=headers)
         archives_data = archives_response.json()
 
-        # Encontrando o URL do arquivo do mês de novembro
-        november_archive_url = next((url for url in archives_data['archives'] if f'/games/{year}' in url), None)
+        year = archives_data.get('archives')[-1].split('/')[-2]
 
-        # Verificando se o arquivo de novembro foi encontrado
-        if november_archive_url:
-            november_games_response = requests.get(november_archive_url, headers=headers)
-            november_games_data = november_games_response.json()
-
-            # Verificando se há jogos
-            if november_games_data.get('games'):
-                print(f'Últimos {num_games} jogos de novembro com informações de abertura:')
-                count = 0
-                for i, game in enumerate(november_games_data['games']):
-                    if count >= num_games:
-                        break
-                    
-                    # Analisando a notação PGN para obter informações sobre a abertura
-                    pgn = chess.pgn.read_game(StringIO(game["pgn"]))
-                    eco_url = pgn.headers.get("ECOUrl")
-                    if eco_url:
-                        count += 1
-                        print(f'\nJogo {count}:')
-                        print(f'URL do Jogo: {game["url"]}')
-                        print(f'Movimentos (PGN): {game["pgn"]}')
-                        print(f'ECO URL da Abertura: {eco_url}')
-
-
-    except requests.exceptions.RequestException as e:
-        print(f"Erro ao obter dados dos jogos: {e}")
-
-def calculate_opening_win_percentage(username, year=2023, month=11, num_games=30):
-    try:
-        # Obtendo dados dos arquivos de jogos mensais de novembro
-        archives_url = f'https://api.chess.com/pub/player/{username}/games/archives'
-        archives_response = requests.get(archives_url, headers=headers)
-        archives_data = archives_response.json()
-
-        # Encontrando o URL do arquivo do mês de novembro
         november_archive_url = next((url for url in archives_data['archives'] if f'/games/{year}/{month}' in url), None)
 
-        # Verificando se o arquivo de novembro foi encontrado
         if november_archive_url:
             november_games_response = requests.get(november_archive_url, headers=headers)
             november_games_data = november_games_response.json()
 
-            # Verificando se há jogos
             if november_games_data.get('games'):
-                opening_stats = {}  # Dicionário para armazenar estatísticas de aberturas
+                opening_stats = {}
 
                 for i, game in enumerate(november_games_data['games'][:num_games]):
-                    # Analisando a notação PGN para obter informações sobre a abertura
+                    print(f'\nAnalisando Jogo {i + 1}...')
+
                     pgn = chess.pgn.read_game(StringIO(game["pgn"]))
                     eco_url = pgn.headers.get("ECOUrl")
 
-                    # Obtendo o resultado da partida
-                    result = game.get('result', 'N/A')
+                    if not eco_url:
+                        board = pgn.board()
+                        for move in pgn.mainline_moves():
+                            board.push(move)
+                            eco_url = board.variation_san([move])[0]
+                            if eco_url:
+                                break
 
-                    # Atualizando estatísticas de aberturas
-                    if eco_url and result in ['1-0', '0-1']:
-                        opening_stats[eco_url] = opening_stats.get(eco_url, {'wins': 0, 'total': 0})
+                    print(f'ECO URL da Abertura: {eco_url}')
+
+                    board = pgn.end().board()
+                    result = board.result(claim_draw=True)
+                    print(f'Resultado da Partida: {result}')
+
+                    if eco_url and result != "1/2-1/2":
+                        opening_stats[eco_url] = opening_stats.get(eco_url, {'wins': 0, 'losses': 0, 'total': 0})
                         opening_stats[eco_url]['total'] += 1
-                        if result == '1-0':
+                        if result == "1-0":
                             opening_stats[eco_url]['wins'] += 1
+                        elif result == "0-1":
+                            opening_stats[eco_url]['losses'] += 1
 
-                # Calculando e imprimindo porcentagens de vitória por abertura
-                print('Porcentagem de Vitória por Abertura:')
+                print('\nPorcentagem de Vitória por Abertura:')
                 for eco_url, stats in opening_stats.items():
                     win_percentage = (stats['wins'] / stats['total']) * 100
                     print(f'{eco_url}: {win_percentage:.2f}% (Total de Jogos: {stats["total"]})')
@@ -101,8 +61,4 @@ def calculate_opening_win_percentage(username, year=2023, month=11, num_games=30
     except requests.exceptions.RequestException as e:
         print(f"Erro ao obter dados dos jogos: {e}")
 
-# Exemplo de uso
-calculate_opening_win_percentage("GMKrikor",year=2023, month=11, num_games=30)
-
-#get_player_rating("GMKrikor")
-#get_games_with_opening_info("GMKrikor",year=2023,num_games=50)
+calculate_opening_win_percentage("GMKrikor", month=11, num_games=50)
